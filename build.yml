@@ -1,0 +1,30 @@
+name: Build mod jar
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack the project if it was uploaded as a .zip
+        run: |
+          if [ ! -f build.gradle ]; then
+            for z in *.zip; do [ -f "$z" ] && unzip -o -q "$z"; done
+            if [ -d mod ]; then cp -r mod/. .; fi
+          fi
+          ls
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.1.1
+      - name: Build
+        run: gradle build
+      - name: Upload the jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: dronemod-jar
+          path: build/libs/*.jar
