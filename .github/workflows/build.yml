@@ -1,39 +1,31 @@
-name: Build JSON
-
+name: Build mod jar
 on:
   push:
-    branches:
-      - main
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron:  '0 * * * *'
-
+  workflow_dispatch:
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install PyGithub
-    - name: Run script and commit changes
-      run: |
-        python release.py
-        echo "Setting up git credentials..."
-        git remote set-url origin https://x-access-token:"$GITHUB_TOKEN"@github.com/"$GITHUB_REPOSITORY".git
-        git config --global user.email "actions@github.com"
-        git config --global user.name "actions"
-        echo "Git credentials configured."
-
-        git checkout main
-        git add .
-        git commit -m "Automatic update of data" && git push --set-upstream origin main || true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+      - name: Unpack the project if it was uploaded as a .zip
+        run: |
+          if [ ! -f build.gradle ]; then
+            for z in *.zip; do [ -f "$z" ] && unzip -o -q "$z"; done
+            if [ -d mod ]; then cp -r mod/. .; fi
+          fi
+          ls
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.1.1
+      - name: Build
+        run: gradle build
+      - name: Upload the jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: dronemod-jar
+          path: build/libs/*.jar
+          
